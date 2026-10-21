@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Compile-time reference stub for BepInEx 5.4.23.x.
+    It only mirrors the handful of public APIs the plugin uses so the plugin can be
+    built without downloading BepInEx. It is NEVER shipped: at runtime the plugin
+    binds to the real BepInEx.dll installed in the game folder.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>BepInEx</AssemblyName>
+    <RootNamespace>BepInEx</RootNamespace>
+    <Version>5.4.23.5</Version>
+    <AssemblyVersion>5.4.23.5</AssemblyVersion>
+    <FileVersion>5.4.23.5</FileVersion>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="UnityEngine.Modules" Version="2021.3.33" IncludeAssets="compile" PrivateAssets="all" />
+  </ItemGroup>
+</Project>
