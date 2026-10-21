@@ -40,18 +40,37 @@ namespace VRoidClothingToggles
             proxyRoot.transform.SetParent(transform, false);
         }
 
+        bool loggedError;
+        bool inputBroken;
+        GameObject menuHost;
+
         void Update()
         {
-            if (Time.unscaledTime >= nextPoll)
+            try
             {
-                nextPoll = Time.unscaledTime + PollInterval;
-                CheckModel();
+                if (Time.unscaledTime >= nextPoll)
+                {
+                    nextPoll = Time.unscaledTime + PollInterval;
+                    CheckModel();
+                    EnsureMenuHost();
+                }
+                SyncLayers();
+            }
+            catch (System.Exception e)
+            {
+                if (!loggedError) Plugin.Log?.LogError("Unexpected error: " + e);
+                loggedError = true;
             }
 
-            SyncLayers();
-
-            if (WindowKey != KeyCode.None && Input.GetKeyDown(WindowKey))
-                showWindow = !showWindow;
+            if (WindowKey != KeyCode.None && !inputBroken)
+            {
+                try { if (Input.GetKeyDown(WindowKey)) showWindow = !showWindow; }
+                catch (System.Exception e)
+                {
+                    inputBroken = true;
+                    Plugin.Log?.LogWarning("Hotkey disabled (input not available): " + e.Message);
+                }
+            }
         }
 
         void CheckModel()
@@ -66,12 +85,20 @@ namespace VRoidClothingToggles
             Teardown();
             trackedModel = model;
             trackedHadModel = model != null;
-            if (model != null) Setup(model);
+            if (model != null)
+            {
+                Plugin.Log?.LogInfo($"Active model changed: '{model.name}'.");
+                Setup(model);
+            }
         }
 
         void Setup(GameObject model)
         {
-            if (!GameBridge.IsVrm(model)) return;
+            if (!GameBridge.IsVrm(model))
+            {
+                Plugin.Log?.LogInfo($"'{model.name}' is not a VRM model; skipping.");
+                return;
+            }
 
             if (GameBridge.HasOwnClothes(model, null))
             {
@@ -82,7 +109,13 @@ namespace VRoidClothingToggles
             var found = LayerDetector.Detect(model);
             if (found.Count == 0)
             {
-                Plugin.Log?.LogInfo($"No clothing layers found on '{model.name}'.");
+                Plugin.Log?.LogInfo($"No clothing layers found on '{model.name}'. Materials on this model:");
+                foreach (var r in LayerDetector.GetMeshRenderers(model))
+                {
+                    var mats = new List<string>();
+                    foreach (var m in r.sharedMaterials) mats.Add(m != null ? m.name : "(none)");
+                    Plugin.Log?.LogInfo($"  {r.name}: {string.Join(" | ", mats.ToArray())}");
+                }
                 return;
             }
 
@@ -110,9 +143,9 @@ namespace VRoidClothingToggles
                 var objs = new GameObject[n];
                 for (int i = 0; i < n; i++) { names[i] = layers[i].Label; objs[i] = proxies[i]; }
 
-                var animator = model.GetComponentInChildren<Animator>();
-                var host = animator != null ? animator.gameObject : model;
-                menuComponent = GameBridge.AddClothesMenu(host, names, objs);
+                pendingNames = names;
+                pendingProxies = objs;
+                EnsureMenuHost();
 
                 if (layers.Count > MaxMenuButtons)
                     Plugin.Log?.LogInfo($"'{model.name}' has {layers.Count} layers; the Clothes menu shows the first {MaxMenuButtons}. Press {WindowKey} for all of them.");
@@ -123,8 +156,43 @@ namespace VRoidClothingToggles
             Plugin.Log?.LogInfo($"'{model.name}': found {layers.Count} clothing layer(s): {string.Join(", ", labels.ToArray())}");
         }
 
+        string[] pendingNames;
+        GameObject[] pendingProxies;
+
+        /// <summary>
+        /// The radial menu shows the Clothes button only when the animator it tracks has an
+        /// MEClothes component. Keep ours on that exact object, even if the game swaps it later.
+        /// </summary>
+        void EnsureMenuHost()
+        {
+            if (pendingNames == null || trackedModel == null) return;
+
+            var modelTr = trackedModel.transform;
+            GameObject host = null;
+            var menuAnim = GameBridge.GetMenuAnimator();
+            if (menuAnim != null && (menuAnim.transform.IsChildOf(modelTr) || modelTr.IsChildOf(menuAnim.transform)))
+                host = menuAnim.gameObject;
+            if (host == null)
+            {
+                var a = trackedModel.GetComponentInChildren<Animator>();
+                host = a != null ? a.gameObject : trackedModel;
+            }
+
+            if (menuComponent != null && menuHost == host) return;
+
+            if (menuComponent != null) Destroy(menuComponent);
+            menuComponent = GameBridge.AddClothesMenu(host, pendingNames, pendingProxies);
+            menuHost = host;
+            Plugin.Log?.LogInfo(menuComponent != null
+                ? $"Added Clothes menu to '{host.name}' (menu animator: {(menuAnim != null ? menuAnim.name : "none found")})."
+                : "Could not add the Clothes menu component.");
+        }
+
         void Teardown()
         {
+            pendingNames = null;
+            pendingProxies = null;
+            menuHost = null;
             hider.RestoreAll();
             foreach (var p in proxies) if (p != null) Destroy(p);
             proxies.Clear();

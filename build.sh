@@ -6,7 +6,7 @@ cd "$(dirname "$0")"
 
 dotnet build src/VRoidClothingToggles/VRoidClothingToggles.csproj -c Release -nologo
 
-out=src/VRoidClothingToggles/bin/Release/netstandard2.0/VRoidClothingToggles.dll
+out=src/VRoidClothingToggles/bin/Release/net472/VRoidClothingToggles.dll
 stage=$(mktemp -d)
 mkdir -p "$stage/BepInEx/plugins/VRoidClothingToggles" dist
 cp "$out" "$stage/BepInEx/plugins/VRoidClothingToggles/"

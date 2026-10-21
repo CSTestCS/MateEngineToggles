@@ -10,7 +10,8 @@ namespace VRoidClothingToggles
     /// </summary>
     internal static class GameBridge
     {
-        static Type vrmLoaderType, meClothesType, outfitEntryType, saveLoadType;
+        static Type vrmLoaderType, meClothesType, outfitEntryType, saveLoadType, receiverType;
+        static FieldInfo receiverAnimator;
         static MethodInfo getCurrentModel;
         static bool resolved;
         static UnityEngine.Object loader;
@@ -24,6 +25,9 @@ namespace VRoidClothingToggles
             vrmLoaderType = FindType("VRMLoader");
             meClothesType = FindType("MEClothes");
             saveLoadType = FindType("SaveLoadHandler");
+            receiverType = FindType("AvatarAnimatorReceiver");
+            if (receiverType != null)
+                receiverAnimator = receiverType.GetField("avatarAnimator", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             if (vrmLoaderType != null)
                 getCurrentModel = vrmLoaderType.GetMethod("GetCurrentModel", BindingFlags.Instance | BindingFlags.Public);
             if (meClothesType != null)
@@ -33,6 +37,8 @@ namespace VRoidClothingToggles
                 Plugin.Log?.LogError("MateEngine's VRMLoader was not found. This game version is not supported.");
             if (meClothesType == null || outfitEntryType == null)
                 Plugin.Log?.LogError("MateEngine's MEClothes was not found. This game version is not supported.");
+            Plugin.Log?.LogInfo($"Game classes: VRMLoader={(getCurrentModel != null ? "ok" : "MISSING")}, " +
+                $"MEClothes={(outfitEntryType != null ? "ok" : "MISSING")}, AvatarAnimatorReceiver={(receiverAnimator != null ? "ok" : "MISSING")}");
         }
 
         public static bool IsSupported
@@ -47,11 +53,29 @@ namespace VRoidClothingToggles
             if (getCurrentModel == null) return null;
             if (loader == null)
             {
-                loader = UnityEngine.Object.FindFirstObjectByType(vrmLoaderType);
+                loader = UnityEngine.Object.FindFirstObjectByType(vrmLoaderType, FindObjectsInactive.Include);
                 if (loader == null) return null;
             }
             try { return getCurrentModel.Invoke(loader, null) as GameObject; }
             catch { return null; }
+        }
+
+        /// <summary>
+        /// The animator the radial menu uses to decide whether to show the Clothes button.
+        /// MEClothes must sit on this object (or below it) for the button to appear.
+        /// </summary>
+        public static Animator GetMenuAnimator()
+        {
+            Resolve();
+            if (receiverType == null || receiverAnimator == null) return null;
+            foreach (var r in UnityEngine.Object.FindObjectsByType(receiverType, FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            {
+                var b = r as Behaviour;
+                if (b == null || !b.isActiveAndEnabled) continue;
+                var anim = receiverAnimator.GetValue(r) as Animator;
+                if (anim != null && anim.isActiveAndEnabled && anim.gameObject.activeInHierarchy) return anim;
+            }
+            return null;
         }
 
         public static bool IsVrm(GameObject model)

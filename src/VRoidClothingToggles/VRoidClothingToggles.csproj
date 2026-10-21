@@ -1,13 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net472</TargetFramework>
     <AssemblyName>VRoidClothingToggles</AssemblyName>
     <RootNamespace>VRoidClothingToggles</RootNamespace>
     <LangVersion>9.0</LangVersion>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Nullable>disable</Nullable>
     <Deterministic>true</Deterministic>
+    <!-- MateEngine uses the .NET Framework 4.x API profile (Mono). -->
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
   <ItemGroup>
     <!-- Unity engine reference assemblies (compile only; the game provides them at runtime). -->
     <PackageReference Include="UnityEngine.Modules" Version="2021.3.33" IncludeAssets="compile" PrivateAssets="all" />

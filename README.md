@@ -73,9 +73,14 @@ material slot emptied. Showing every layer again restores the original mesh.
 
 ## Troubleshooting
 
-- **No log lines from the mod / BepInEx doesn't start:** make sure you used the
+- **First, check BepInEx is running:** after starting the game, the file
+  `BepInEx/LogOutput.log` should exist and contain `VRoid Clothing Toggles 1.0.1 loaded`.
+  Pressing **F9** should also open the "Clothing Layers" window.
+- **No `LogOutput.log` / BepInEx doesn't start:** make sure you used the
   *Windows x64* BepInEx 5 build and extracted it next to `MateEngineX.exe`, not into a
-  subfolder.
+  subfolder. Also check that the game folder has `MateEngineX_Data/Managed/Assembly-CSharp.dll`.
+  If the folder instead has `GameAssembly.dll`, that build of the game uses IL2CPP, which
+  BepInEx 5 can't load.
 - **No Clothes button:** the log says how many layers were found. "No clothing layers
   found" means the model's materials don't follow VRoid naming. "already has its own
   clothing setup" means the model ships its own Clothes menu.
